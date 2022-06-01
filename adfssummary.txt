@@ -1,95 +1,75 @@
-/etc/fstab
+(New-Guid).Guid
+New-ADObject -Name "ADFS" -Type Container -Path “OU=abdelali,DC=abdelali,DC=org”
+New-ADObject -Name "280629cb-eb1e-44ea-8d8f-b80b591108d5" -Type Container -Path “CN=ADFS,OU=abdelali,DC=abdelali,DC=org”
+
+Set-AuditRule -AdObjectPath 'AD:\CN=ADFS,CN=280629cb-eb1e-44ea-8d8f-b80b591108d5,OU=abdelali,DC=abdelali,DC=org' -WellKnownSidType WorldSid -Rights GenericRead -InheritanceFlags None -AuditFlags Success
+
+$adminConfig = @{"DKMContainerDn"="CN=280629cb-eb1e-44ea-8d8f-b80b591108d5,CN=ADFS,OU=abdelali,DC=abdelali,DC=org"}
+
+$svcCred = (get-credential)
+
+$localAdminCred = (get-credential)
+
+Install-WindowsFeature ADFS-Federation
+
+Install-ADFSFarm -CertificateThumbprint 685ff04befa546a127290334184ff198e119acf1 -FederationServiceName "ADFS Service" -ServiceAccountCredential $svcCred -Credential $localAdminCred -OverwriteConfiguration -AdminConfiguration $adminConfig -SigningCertificateThumbprint 685ff04befa546a127290334184ff198e119acf1 -DecryptionCertificateThumbprint 685ff04befa546a127290334184ff198e119acf1
+
+https://<yourservername>/FederationMetadata/2007-06/FederationMetadata.xml
+https://adfs.example.com/adfs/ls/idpinitiatedsignon.aspx
+
+Set-ADFSProperties -EnableIdpInitiatedSignonPage $true
+
+get-adfsendpoint
+
+ Get-AdfsEndpoint | fl *fullurl*
+
+$LocalTempDir = $env:TEMP; $ChromeInstaller = "ChromeInstaller.exe"; (new-object    System.Net.WebClient).DownloadFile('http://dl.google.com/chrome/install/375.126/chrome_installer.exe', "$LocalTempDir\$ChromeInstaller"); & "$LocalTempDir\$ChromeInstaller" /silent /install; $Process2Monitor =  "ChromeInstaller"; Do { $ProcessesFound = Get-Process | ?{$Process2Monitor -contains $_.Name} | Select-Object -ExpandProperty Name; If ($ProcessesFound) { "Still running: $($ProcessesFound -join ', ')" | Write-Host; Start-Sleep -Seconds 2 } else { rm "$LocalTempDir\$ChromeInstaller" -ErrorAction SilentlyContinue -Verbose } } Until (!$ProcessesFound)
+
+Install-Module MSOnline
+
+$Msolcred = Get-credential
+Connect-MsolService -Credential $MsolCred
+
+PRR
+
+Set-MsolADFSContext –computer <ADFS instance FQDN>
+
+Set-MsolPasswordPolicy -ValidityPeriod 90 -NotificationDays 14 -DomainName abdelali.com
+
+Convert-MsolDomainToFederated –DomainName <Domain name>
+
+Update-MsolFederatedDomain -DomainName <Domain name>
+
+Get-MsolDomain -Domainename jadelmoulaoutlook.onmicrosoft.com
+
+Get-MsolFederationProperty -Domainname domain.com
+
+Convert-MsolDomainToFederated -DomainName abdelali.com -SupportMultipleDomain
+
+Import-Module ADSync
+Start-ADSyncSyncCycle -PolicyType Delta
+
+Install-WebApplicationProxy -FederationServiceTrustCredential System.Management.Automation.PSCredential -CertificateThumbprint 'FDB2595FAB5BC1A60441E94C0231DD1D5649BEAE' -FederationServiceName 'adfsserver.abdelali.com'
+
+enable-ADFSEndpoint -TargetAddress /adfs/services/trust/13/Windows
+
+Set-ADFSEndpoint -TargetAddress /adfs/services/trust/13/Windows -Proxy $true
 
 
-install the efs client
-
-sudo yum install -y amazon-efs-utils
-
-1. file-system-id:/ efs-mount-point efs _netdev,noresvport,tls,iam 0 0
-
-file-system-id:/ efs-mount-point efs _netdev,noresvport,tls,iam 0 0
-
-2. To automatically mount with IAM authorization to a Linux instance using a credentials file
-
-file-system-id:/ efs-mount-point efs _netdev,noresvport,tls,iam,awsprofile=namedprofile 0 0
-
-3. To automatically mount a file system using an EFS access point
-
-file-system-id efs-mount-point efs _netdev,noresvport,tls,accesspoint=access-point-id 0 0
-
-
-4. mount an efs from another region
-
-modify the file efs-utils.conf
-and add to it the region where efs locates
-#region = us-east-1
-
-
-5. mounting one zone file system
-sudo mount -t efs -o az=availability-zone-name,tls file-system-id mount-point/
-
-6. mount using IAM
-sudo mount -t efs -o tls,iam file-system-id efs-mount-point/
-
-
-7. Mounting with IAM using a named profile
-sudo mount -t efs -o tls,iam,awsprofile=namedprofile file-system-id efs-mount-point/
-
-8. mounting using access point
-sudo mount -t efs -o tls,accesspoint=access-point-id file-system-id efs-mount-point
-
-9. Turn Off the ID Mapper
-service rpcidmapd status
- sudo service rpcidmapd stop
-
-
-
-
-
-
-
-
-
-
-{
-    "Version": "2012-10-17",
-    "Id": "MyFileSystemPolicy",
-    "Statement": [
-        {
-            "Sid": "App1Access",
-            "Effect": "Allow",
-            "Principal": { "AWS": "arn:aws:iam::111122223333:role/app1" },
-            "Action": [
-                "elasticfilesystem:ClientMount",
-                "elasticfilesystem:ClientWrite"
-            ],
-            "Condition": {
-                "StringEquals": {
-                    "elasticfilesystem:AccessPointArn" : "arn:aws:elasticfilesystem:us-east-1:222233334444:access-point/fsap-01234567"
-                }
-            }
-        },
-        {
-            "Sid": "App2Access",
-            "Effect": "Allow",
-            "Principal": { "AWS": "arn:aws:iam::111122223333:role/app2" },
-            "Action": [
-                "elasticfilesystem:ClientMount",
-                "elasticfilesystem:ClientWrite"
-            ],
-            "Condition": {
-                "StringEquals": {
-                    "elasticfilesystem:AccessPointArn" : "arn:aws:elasticfilesystem:us-east-1:222233334444:access-point/fsap-89abcdef"
-                }
-            }
-        }
-    ]
-}
-
-
-curl http://169.254.169.254/latest/meta-data/iam/info
+adfs and adfs proxy https security group
 
 
 
-10. to mount a volume using iam 
-add this to user mount command -o iam
+create claims provider trust for abdelali.com on abdellai.com using federation of jadelmoula.com
+create relying party trust for abdelali.com on jadelmoula.com using federation of abdelali.com
+
+
+wtrealm=urn:microsoft:adfs:claimsxray
+
+that you are who you say you are
+
+
+
+
+resolver-1 37:47 you have to test the ping from the test ec2 instance not from the openswan instance
+
